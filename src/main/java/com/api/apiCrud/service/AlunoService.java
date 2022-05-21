@@ -1,19 +1,18 @@
 package com.api.apiCrud.service;
 
-import com.api.apiCrud.domain.Aluno;
-import com.api.apiCrud.exception.BadResourceException;
-import com.api.apiCrud.exception.ResouceAlreadyExistsException;
-import com.api.apiCrud.exception.ResourceNotFoundException;
-import com.api.apiCrud.repository.AlunoRepository;
-import com.api.apiCrud.specification.AlunoSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.List;
+import com.api.apiCrud.domain.Aluno;
+import com.api.apiCrud.exception.BadResourceException;
+import com.api.apiCrud.exception.ResourceAlreadyExistsException;
+import com.api.apiCrud.exception.ResourceNotFoundException;
+import com.api.apiCrud.repository.AlunoRepository;
 
+@Service
 public class AlunoService {
 
     @Autowired
@@ -25,32 +24,25 @@ public class AlunoService {
 
     public Aluno findById(Long id) throws ResourceNotFoundException {
         Aluno aluno = alunoRepository.findById(id).orElse(null);
-        if(aluno != null) {
+        if(aluno == null) {
             throw new ResourceNotFoundException("Aluno não encontrado com o id: " + id);
         }
         else return aluno;
     }
 
-    public List<Aluno> findAll(int pageNumber, int rowPerPage) {
-        List<Aluno> aluno = new ArrayList<>();
-        alunoRepository.findAll(PageRequest.of(pageNumber - 1, rowPerPage)).forEach(aluno::add);
-        return aluno;
+    public Page<Aluno> findAll(Pageable pageable) {
+        return alunoRepository.findAll(pageable);
     }
 
-    public List<Aluno> findAllByNome(String nome, int pageNumber, int rowPerPage) {
-        Aluno filter = new Aluno();
-        filter.setNome(nome);
-        Specification<Aluno> spec = new AlunoSpecification(filter);
-
-        List<Aluno> alunos = new ArrayList<>();
-        alunoRepository.findAll(spec, PageRequest.of(pageNumber - 1, rowPerPage)).forEach(alunos::add);
+    public Page<Aluno> findAllByNome(String nome, Pageable page) {
+        Page<Aluno> alunos = alunoRepository.findByNome(nome, page);
         return alunos;
     }
 
-    public Aluno save(Aluno aluno) throws BadResourceException, ResouceAlreadyExistsException {
+    public Aluno save(Aluno aluno) throws BadResourceException, ResourceAlreadyExistsException {
         if(!StringUtils.isEmpty(aluno.getNome())) {
             if (aluno.getId() != null && existsById(aluno.getId())) {
-                throw new ResouceAlreadyExistsException("Aluno com id: " + aluno.getId() + " já existe");
+                throw new ResourceAlreadyExistsException("Aluno com id: " + aluno.getId() + " já existe");
             }
             return alunoRepository.save(aluno);
         }

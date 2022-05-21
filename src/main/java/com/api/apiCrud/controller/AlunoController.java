@@ -1,0 +1,79 @@
+package com.api.apiCrud.controller;
+
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
+
+import com.api.apiCrud.domain.Aluno;
+import com.api.apiCrud.exception.BadResourceException;
+import com.api.apiCrud.exception.ResourceAlreadyExistsException;
+import com.api.apiCrud.exception.ResourceNotFoundException;
+import com.api.apiCrud.service.AlunoService;
+
+@RestController
+@RequestMapping("/api")
+//@Tag(name = "aluno", description = "API para CRUD de aluno")
+public class AlunoController {
+	
+	private final Logger logger = LoggerFactory.getLogger(this.getClass());
+
+	@Autowired
+	private AlunoService alunoService;
+	
+	@GetMapping(value = "/aluno", consumes = 
+			MediaType.APPLICATION_JSON_VALUE, produces = 
+			MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Page<Aluno>> findAll(
+			@RequestBody(required=false) String nome, Pageable pageable){
+		if (StringUtils.isEmpty(nome)) {
+			return ResponseEntity.ok(alunoService.findAll(pageable));
+		}
+		else {
+			return ResponseEntity.ok(alunoService.findAllByNome(nome, pageable));
+		}
+	}
+	
+	@GetMapping(value = "/aluno/{id}", produces =
+			MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<Aluno> findAlunoById(@PathVariable long id) {
+		try {
+			Aluno aluno = alunoService.findById(id);
+			return ResponseEntity.ok(aluno);
+		} catch (ResourceNotFoundException ex) {
+			logger.error(ex.getMessage());
+			throw new ResponseStatusException(
+					HttpStatus.NOT_FOUND, ex.getMessage(), ex);
+		}
+	}
+	
+	@PostMapping(value = "/aluno")
+	public ResponseEntity<Aluno> addAluno(@RequestBody Aluno aluno)
+	throws URISyntaxException {
+		try {
+			Aluno novoAluno = alunoService.save(aluno);
+			return ResponseEntity.created(new URI("/api/aluno/" + novoAluno.getId())).body(aluno);
+		} catch (ResourceAlreadyExistsException ex) {
+			logger.error(ex.getMessage());
+			return ResponseEntity.status(HttpStatus.CONFLICT).build();
+		} catch (BadResourceException ex) {
+			logger.error(ex.getMessage());
+			return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+		}
+	}
+}
